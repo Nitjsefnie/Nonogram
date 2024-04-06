@@ -54,8 +54,6 @@ def conditional_lru_cache(func):
     def cache_info():
         if getenv('IS_CHILD_PROCESS') != '1':
             return cached_func.cache_info()
-        else:
-            return None
 
     def cache_clear():
         if getenv('IS_CHILD_PROCESS') != '1':
@@ -377,7 +375,6 @@ def solve_folder(loc, drawing = False) -> None:
     pic = Picture(1, 1)
 
     onlyfiles = sorted( join(loc, f) for f in listdir(loc) if isfile(join(loc, f)) )
-    print(onlyfiles)
     for file in onlyfiles:
         solve_file(file, drawing)
 

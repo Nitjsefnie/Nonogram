@@ -13,6 +13,5 @@ if __name__ == "__main__":
     solve_folder("random_outputs/15")
     pass
 
-print(Global.stored_backtrack)
 terminate_pool()
 
