@@ -1,4 +1,4 @@
-from numpy import ndarray, full, int8, int32, int64, count_nonzero, iinfo
+from numpy import ndarray, full, int8, int32, int64, count_nonzero, iinfo, where
 from typing import Optional, Tuple, Union, Callable
 
 cdef int EMPTY = 0, FULL = 1, UNKNOWN = 2
@@ -204,3 +204,23 @@ class Picture:
 
     def __setitem__(self, key, value):
         self.__pixels[key] = value
+
+    def __eq__(self, obj):
+        if isinstance(obj, Picture):
+            return (self.get_pixels() == obj.get_pixels()).all()
+        return False
+
+    def __sub__(self, obj):
+        if not isinstance(obj, Picture):
+            raise TypeError
+        if self == obj:
+            return []
+
+        result = []
+        pixs, pixs2 = self.get_pixels(), obj.get_pixels()
+        indexes = where(pixs != pixs2)
+        differing_values = pixs[indexes]
+        return [(idx[0], idx[1], val) for idx, val in zip(zip(*indexes), differing_values)]
+
+    def set_all_pixels(self, pixels):
+        self.__pixels = pixels

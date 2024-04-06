@@ -49,11 +49,9 @@ def conditional_lru_cache(func):
         if getenv('IS_CHILD_PROCESS') == '1':
             return func(line, clue)
         else:
-            # Convert the argument and use the cached version of the function
             return cached_func(line.tobytes(), clue)
 
     def cache_info():
-        # Provide cache info only if not in a child process
         if getenv('IS_CHILD_PROCESS') != '1':
             return cached_func.cache_info()
         else:
@@ -279,6 +277,8 @@ def solve_contra(mapped_rows: List[Tuple[int, int, List[int]]],
         if pic2 is not None:
             if not pic2.is_solved():
                 pic.pixel_gain[index[0], index[1], value] = pic2.count_matching_pixels(lambda x: x != UNKNOWN) - new_filled
+                for diff in (pic2 - pic):
+                    tested[diff] = True
                 continue
             yield pic2
         pic.set_pixel(index, value ^ 1)
@@ -394,7 +394,6 @@ def solve_file(location, drawing = False, cheated_pixels = [], number = -1):
     start = time()
     i = 0
     for pic in solve(rows, cols, cheated_pixels = cheated_pixels):
-        #save_picture(pic, f"sols2/{i}.solution")
         if drawing:
             draw(pic.get_pixels())
         i += 1

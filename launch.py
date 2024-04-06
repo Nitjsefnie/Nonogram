@@ -1,12 +1,16 @@
 from tests import *
 from new import *
 
-change_pool_size()
-draw_steps(True)
+change_pool_size(12)
+#draw_steps(True)
 
 if __name__ == "__main__":
-    #2647  2712  3867  3929
-    solve_folder("demo_nonograms/webpbn")
+    files = [
+        #"15/313.80157017707825",
+    ]
+    for file in files:
+        solve_file("random_outputs/" + file)
+    solve_folder("random_outputs/15")
     pass
 
 print(Global.stored_backtrack)

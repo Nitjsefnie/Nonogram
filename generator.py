@@ -1,6 +1,7 @@
-SIZE = 50
-PIXELS = [0, 1, 1]
-THREAD_COUNT = 8
+SIZE = 15
+#PIXELS = [0, 0, 1, 1, 1]
+PIXELS = [0, 1]
+THREAD_COUNT = 12
 
 from tests import *
 from random import choice
@@ -11,9 +12,9 @@ from datetime import datetime
 
 def generate_nonogram(height, width):
     pic = Picture(height, width)
-    pic._pixels = array([
+    pic.set_all_pixels(array([
         [choice(PIXELS) for _ in range(width)] for _ in range(height)
-    ])
+    ]))
     return pic
 
 
@@ -41,5 +42,5 @@ while True:
         #print("pics differ")
         #draw(pic.pixels)
         #draw(pic2.pixels)
-    save_clues("random_outputs/" + str(result_time), row_clues, col_clues)
+    save_clues("random_outputs/" + str(SIZE) + "/" + str(result_time), row_clues, col_clues)
 terminate_pool()
