@@ -1,0 +1,7 @@
+/*
+!*.pyx
+!*.py
+!*.md
+!*.sh
+!demo_nonograms/
+!.gitignore
