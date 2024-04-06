@@ -9,6 +9,5 @@ if __name__ == "__main__":
     solve_folder("demo_nonograms/webpbn")
     pass
 
-print(Global.stored_backtrack)
 terminate_pool()
 

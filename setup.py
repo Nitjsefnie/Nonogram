@@ -8,7 +8,6 @@ shared_macros = []
 # Define your extensions with shared macros
 extensions = [
     Extension("string_builder", ["string_builder.pyx"], define_macros=shared_macros),
-    Extension("cache", ["cache.pyx"], define_macros=shared_macros),
     Extension("utils", ["utils.pyx"], define_macros=shared_macros),
     Extension("globalvars", ["globalvars.pyx"], define_macros=shared_macros),
     Extension("pool", ["pool.pyx"], define_macros=shared_macros),

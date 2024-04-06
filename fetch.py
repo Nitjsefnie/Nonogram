@@ -3,10 +3,10 @@ from solver import *
 from os import system
 
 def foo():
-    i = 4496
+    i = 7382
     not_found = 0
     found = 0
-    while not_found < 100 and found < 200:
+    while not_found < 100 and found < 500:
         i += 1
         text = fetch_webpbn(i)
         if text is not None:
