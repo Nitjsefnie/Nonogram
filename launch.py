@@ -1,3 +1,4 @@
+#!/bin/python3
 from tests import *
 from new import *
 

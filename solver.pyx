@@ -234,14 +234,10 @@ def recalculate_pixel_complexities(mapped_rows, mapped_cols, pic):
 
 
 def solve_contra(mapped_rows: List[Tuple[int, int, List[int]]],
-                    mapped_cols: List[Tuple[int, int, List[int]]],
-                    pic: Picture,
-                    depth: int,
-                    back_progress: List[str],
-                    min_neighs = 4,
-                    sorted_list = None,
-                    tested = None
-                    ) -> Optional[Picture]:
+                 mapped_cols: List[Tuple[int, int, List[int]]],
+                 pic: Picture, depth: int, back_progress: List[str],
+                 min_neighs = 4, sorted_list = None, tested = None
+                 ) -> Optional[Picture]:
     if min_neighs == 4:
         recalculate_pixel_complexities(mapped_rows, mapped_cols, pic)
         indexed = ((value, (index[0], index[1]), index[2]) for index, value in ndenumerate(pic.pixel_complexity) if value != iinfo(int64).max)
@@ -279,6 +275,7 @@ def solve_contra(mapped_rows: List[Tuple[int, int, List[int]]],
                     tested[diff] = True
                 continue
             yield pic2
+        pic2 = None
         pic.set_pixel(index, value ^ 1)
         pic.set_should_solve_row(index[0], True)
         pic.set_should_solve_col(index[1], True)
@@ -293,11 +290,14 @@ def solve_contra(mapped_rows: List[Tuple[int, int, List[int]]],
             break
     if filled == new_filled:
         if min_neighs == 0:
+            tested = None
             yield from solve_backtrack(mapped_rows, mapped_cols, pic, depth, back_progress, sorted_list)
             return
         yield from solve_contra(mapped_rows, mapped_cols, pic, depth, back_progress,
                                 min_neighs - 1, sorted_list, tested)
         return
+    sorted_list = None
+    tested = None
     yield from solve_real(mapped_rows, mapped_cols, pic, depth + 1, back_progress)
 
 

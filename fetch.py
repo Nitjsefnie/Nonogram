@@ -3,7 +3,7 @@ from solver import *
 from os import system
 
 def foo():
-    i = 7382
+    i = 9892
     not_found = 0
     found = 0
     while not_found < 100 and found < 500:
