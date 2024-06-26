@@ -19,8 +19,7 @@ setrecursionlimit(10000)
 Pixel = int
 cdef int EMPTY = 0, FULL = 1, UNKNOWN = 2
 
-Clue = List[int]
-Nonogram = List[List[int]]
+last_draw_time = time()
 
 def clues_valid(rows: List[Clue], cols: List[Clue]) -> bool:
     cdef int height = len(rows)
@@ -156,8 +155,11 @@ def solve_real(mapped_rows: List[Tuple[int, int, List[int]]],
            contradicting: bool = False
            ) -> Optional[Picture]:
     if Global.drawing:
-        draw(pic.get_pixels(), back_progress, pic)
-        print(len_gen_lines.cache_info())
+        global last_draw_time
+        if time() - last_draw_time > 0.05:
+            draw(pic.get_pixels(), back_progress, pic)
+            print(len_gen_lines.cache_info())
+            last_draw_time = time()
     if not solve_check(pic, mapped_rows, mapped_cols, depth != 0):
         return
 
