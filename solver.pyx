@@ -42,7 +42,7 @@ def clues_valid(rows: List[Clue], cols: List[Clue]) -> bool:
 
 
 def conditional_lru_cache(func):
-    cached_func = lru_cache(maxsize=None)(func)
+    cached_func = lru_cache(maxsize=2 ** 20)(func)
 
     @wraps(func)
     def wrapper(line, clue):
@@ -391,9 +391,10 @@ def solve_file(location, drawing = False, cheated_pixels = [], number = -1):
     start = time()
     i = 0
     for pic in solve(rows, cols, cheated_pixels = cheated_pixels):
-        if drawing:
-            draw(pic.get_pixels())
         i += 1
+        if drawing:
+            print(f"Solution {i}")
+            draw(pic.get_pixels())
         if i == number:
             break
     print(f"{location} on {Global.pool_size} threads: {time() - start}, found {i} solutions")
