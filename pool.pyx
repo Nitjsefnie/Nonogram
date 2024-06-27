@@ -1,6 +1,7 @@
-from globalvars import Global
+from multiprocessing import Pool
 from os import cpu_count
-from multiprocess import Pool
+
+from globalvars import Global
 
 cpdef void change_pool_size(int size = cpu_count() - 1):
     if Global.pool is not None:

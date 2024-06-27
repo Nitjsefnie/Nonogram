@@ -1,7 +1,7 @@
 import requests
-from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
 from io import StringIO
+
 
 def fetch_webpbn(num):
     data = {"go": 1, "id": num, "xml_clue": "on", "fmt": "xml", "xml_soln": "on"}

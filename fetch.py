@@ -3,7 +3,8 @@ from solver import *
 from os import system
 
 def foo():
-    i = 9892
+    draw_steps(True)
+    i = 10000
     not_found = 0
     found = 0
     while not_found < 100 and found < 500:
