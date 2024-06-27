@@ -18,8 +18,7 @@ setrecursionlimit(10000)
 Pixel = int
 cdef int EMPTY = 0, FULL = 1, UNKNOWN = 2
 
-Clue = list[int]
-Nonogram = list[list[int]]
+last_draw_time = time()
 
 def clues_valid(rows, cols) -> bool:
     cdef int height = len(rows)
@@ -41,7 +40,7 @@ def clues_valid(rows, cols) -> bool:
 
 
 def conditional_lru_cache(func):
-    cached_func = lru_cache(maxsize=None)(func)
+    cached_func = lru_cache(maxsize=2 ** 20)(func)
 
     @wraps(func)
     def wrapper(line, clue):
@@ -152,11 +151,14 @@ def solve_real(mapped_rows, mapped_cols, pic, depth, back_progress, contradictin
     col_complexities = [pic.get_col_complexity(i) for i, _ in mapped_cols]
 
     if Global.drawing:
-        if drawer:
-            drawer.draw_nonogram(pic.get_pixels(), row_complexities, col_complexities, back_progress)
-        else:
-            draw(pic.get_pixels(), back_progress, pic)
-            print(len_gen_lines.cache_info())
+        global last_draw_time
+        if time() - last_draw_time > 0.05:
+            if drawer:
+                drawer.draw_nonogram(pic.get_pixels(), row_complexities, col_complexities, back_progress)
+            else:
+                draw(pic.get_pixels(), back_progress, pic)
+                print(len_gen_lines.cache_info())
+            last_draw_time = time()
     if not solve_check(pic, mapped_rows, mapped_cols, depth != 0):
         return
 
@@ -392,10 +394,17 @@ def solve_file(location, drawing=False, cheated_pixels=[], number=-1, drawer=Non
         return
     start = time()
     i = 0
+<<<<<<< HEAD
     for pic in solve(rows, cols, cheated_pixels=cheated_pixels, drawer=drawer):
         if drawing and not drawer:
             draw(pic.get_pixels())
+=======
+    for pic in solve(rows, cols, cheated_pixels = cheated_pixels):
+>>>>>>> f4625a4386e27eaee4712038a89d98bbf86def76
         i += 1
+        if drawing:
+            print(f"Solution {i}")
+            draw(pic.get_pixels())
         if i == number:
             break
     print(f"{location} on {Global.pool_size} threads: {time() - start}, found {i} solutions")

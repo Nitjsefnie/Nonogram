@@ -3,10 +3,10 @@ from solver import *
 from os import system
 
 def foo():
-    draw_steps(True)
-    i = 10000
+    i = 13480
     not_found = 0
     found = 0
+    draw_steps(True)
     while not_found < 100 and found < 500:
         i += 1
         text = fetch_webpbn(i)
