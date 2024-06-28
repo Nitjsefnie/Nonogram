@@ -152,7 +152,7 @@ def solve_real(mapped_rows, mapped_cols, pic, depth, back_progress, contradictin
 
     if Global.drawing:
         global last_draw_time
-        if time() - last_draw_time > 0.05:
+        if time() - last_draw_time > 0.1:
             if drawer:
                 drawer.draw_nonogram(pic.get_pixels(), row_complexities, col_complexities, back_progress)
             else:
@@ -332,7 +332,7 @@ def solve_backtrack(mapped_rows,
                               pic2,
                               1,
                               back_progress \
-                              + [f"r{row:>{rjust_val_rows}d}c{col:>{rjust_val_cols}d}: {f'{k/2:.0%}':>3}",
+                              + [f" r{row:>{rjust_val_rows}d}c{col:>{rjust_val_cols}d}: {f'{k/2:.0%}':>3}",
                               k,
                               2],
                               drawer=drawer
@@ -394,13 +394,9 @@ def solve_file(location, drawing=False, cheated_pixels=[], number=-1, drawer=Non
         return
     start = time()
     i = 0
-<<<<<<< HEAD
     for pic in solve(rows, cols, cheated_pixels=cheated_pixels, drawer=drawer):
         if drawing and not drawer:
             draw(pic.get_pixels())
-=======
-    for pic in solve(rows, cols, cheated_pixels = cheated_pixels):
->>>>>>> f4625a4386e27eaee4712038a89d98bbf86def76
         i += 1
         if drawing:
             print(f"Solution {i}")

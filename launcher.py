@@ -13,6 +13,8 @@ def main():
     drawing = False
 
     while i < len(args):
+        if drawer and not drawing:
+            drawer.endwin()
         arg = args[i]
         if arg == "--solve-file":
             if i + 1 < len(args):
@@ -58,7 +60,7 @@ def main():
         else:
             return
 
-    if drawer is not None:
+    if drawing and drawer is not None:
         drawer.wait_for_quit()
         drawer.endwin()
 

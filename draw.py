@@ -1,4 +1,19 @@
 import curses
+from itertools import islice
+from math import log10
+
+
+def every_second(lst):
+    p = 0
+    q = 1
+    for i in range(0, len(lst), 3):
+        yield lst[i]
+    for i in range(2, len(lst), 3):
+        p *= lst[i]
+        q *= lst[i]
+        p += lst[i - 1]
+    yield f"{(p / q):5%}"
+
 
 class NcursesDrawer:
     def __init__(self):
@@ -11,6 +26,9 @@ class NcursesDrawer:
         curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_YELLOW)  # Unknown cell
         self.cell_size = 2  # Adjust cell size if needed
         self.previous_frame = None  # Buffer to store the previous frame
+        self.max_backtrack_offset_x = 1
+        self.max_row_comp_offset = 1
+        self.max_col_comp_length = 1
 
     def draw_nonogram(self, nonogram, row_complexities, col_complexities, back_progress):
         self._draw_on_ncurses(nonogram, row_complexities, col_complexities, back_progress)
@@ -26,12 +44,16 @@ class NcursesDrawer:
             self.previous_frame = [[None] * cols for _ in range(rows)]
 
         # Calculate the vertical offset for column indexes
-        col_index_height = 2  # Adjust as needed for the number of index lines
-        grid_start_y = col_index_height + 1
+        col_index_height = int(log10(cols)) + 1  # Adjust as needed for the number of index lines
+        grid_start_y = col_index_height + 2
+
+        # Calculate the horizontal offset for backtrack progress
+        self.max_row_comp_offset = complexity_shift = max(2 + int(log10(max(row_complexities))), self.max_row_comp_offset)
+        self.max_backtrack_offset_x = backtrack_offset_x = max(cols * self.cell_size + 9 + complexity_shift,  self.max_backtrack_offset_x)
 
         # Draw column indexes vertically at the top
         for j in range(cols):
-            col_str = f"{j:2}"
+            col_str = f"{j:{col_index_height}}"
             for k, char in enumerate(col_str):
                 if (k + 1) < max_y and (j * self.cell_size + 6) < max_x:  # Adjusted position to prevent overlap
                     self.stdscr.addstr(k + 1, j * self.cell_size + 6, char)
@@ -59,15 +81,16 @@ class NcursesDrawer:
 
         # Draw row complexities at the end of each row
         for i, complexity in enumerate(row_complexities):
-            if (i + grid_start_y) < max_y and (cols * self.cell_size + 8) < max_x:
-                self.stdscr.addstr(i + grid_start_y, cols * self.cell_size + 8, f"{complexity:2}")
+            if (i + grid_start_y) < max_y and (cols * self.cell_size + 8 + complexity_shift) < max_x:
+                self.stdscr.addstr(i + grid_start_y, cols * self.cell_size + 8, f"{complexity:<{complexity_shift}}")
 
         # Draw column complexities at the bottom
+        self.max_col_comp_length = col_complexity_length = max(1 + int(log10(max(col_complexities))), self.max_col_comp_length)
         for i, complexity in enumerate(col_complexities):
-            complexity_str = f"{complexity:2}"
+            complexity_str = f"{complexity:<{col_complexity_length}}"
             for k, char in enumerate(complexity_str):
-                if (rows + grid_start_y + k) < max_y and (i * self.cell_size + 6) < max_x:
-                    self.stdscr.addstr(rows + grid_start_y + k, i * self.cell_size + 6, char)
+                if (rows + grid_start_y + k + 1) < max_y and (i * self.cell_size + 6) < max_x:
+                    self.stdscr.addstr(rows + grid_start_y + k + 1, i * self.cell_size + 6, char)
 
         # Draw borders
         for y in range(grid_start_y, grid_start_y + rows + 1):
@@ -78,10 +101,34 @@ class NcursesDrawer:
             self.stdscr.addstr(grid_start_y - 1, x, '-')
             self.stdscr.addstr(grid_start_y + rows, x, '-')
 
+        # Clear the backtrack progress area
+        for y in range(grid_start_y, max_y):
+            self.stdscr.addstr(y, self.max_backtrack_offset_x, ' ' * (max_x - self.max_backtrack_offset_x - 1))
+
         # Draw backtrack progress
-        for i, progress in enumerate(back_progress):
-            if (i + grid_start_y) < max_y and (cols * self.cell_size + 12) < max_x:
-                self.stdscr.addstr(i + grid_start_y, cols * self.cell_size + 12, progress[:max_x - (cols * self.cell_size + 12)])
+        if back_progress:
+            it = every_second(back_progress)
+            builder = "backtrack progress:"
+            self.stdscr.addstr(grid_start_y, self.max_backtrack_offset_x, builder[:max_x - self.max_backtrack_offset_x])
+
+            # Initialize positions for printing backtrack progress
+            y_pos = grid_start_y + 1
+            x_pos = self.max_backtrack_offset_x
+            max_width = max_x - self.max_backtrack_offset_x
+
+            progress = next(it, None)
+            while progress is not None:
+            #for progress in it:
+                progress_str = str(progress)
+                if x_pos + len(progress_str) + 3 > max_width:  # +3 for the " | " separator
+                    y_pos += 1
+                    x_pos = self.max_backtrack_offset_x
+                if y_pos < max_y:
+                    self.stdscr.addstr(y_pos, x_pos, progress_str)
+                    x_pos += len(progress_str) + 3
+                    progress = next(it, None)
+                    if progress and x_pos + 3 <= max_width:  # Add separator if there is space
+                        self.stdscr.addstr(y_pos, x_pos - 3, " | ")
 
         self.stdscr.refresh()
 
