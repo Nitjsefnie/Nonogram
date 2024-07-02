@@ -1,17 +1,18 @@
-from utils import check_line, gen_line_clues
-from picture import Picture
-from globalvars import Global
-from pool import change_pool_size, terminate_pool
-from draw_utils import draw, draw_steps
-from io_utils import *
-from time import time
+from functools import lru_cache, wraps
+from itertools import chain
+from math import log10
 from os import listdir, getenv
 from os.path import isfile, join
 from sys import setrecursionlimit
-from math import log10
-from itertools import chain
+from time import time
+
 from numpy import full, int64, ndenumerate, iinfo
-from functools import lru_cache, wraps
+
+from draw_utils import draw
+from globalvars import Global
+from io_utils import *
+from pool import change_pool_size
+from utils import check_line
 
 setrecursionlimit(10000)
 
@@ -38,7 +39,6 @@ def clues_valid(rows, cols) -> bool:
 
     return row_sum == col_sum
 
-
 def conditional_lru_cache(func):
     cached_func = lru_cache(maxsize=2 ** 20)(func)
 
@@ -61,7 +61,6 @@ def conditional_lru_cache(func):
     wrapper.cache_clear = cache_clear
 
     return wrapper
-
 
 @conditional_lru_cache
 def len_gen_lines(line, states):
@@ -92,7 +91,6 @@ def len_gen_lines(line, states):
 
     return states_dict.get(len_states - 1, 0) + states_dict.get(len_states - 2, 0)
 
-
 def solve(rows, cols, cheated_pixels = [], drawer = None):
     def states_pregen(clue):
         cdef list states = [0]
@@ -111,11 +109,10 @@ def solve(rows, cols, cheated_pixels = [], drawer = None):
 
     yield from solve_real(mapped_rows, mapped_cols, pic, 0, [], drawer=drawer)
 
-
 def solve_one(clue, int index,
-               is_col, pic
-               ):
-    line = pic.get_col(index) if is_col else pic.get_row(index, copying = False)
+              is_col, pic
+              ):
+    line = pic.get_col(index) if is_col else pic.get_row(index, copying=False)
     res_size = len_gen_lines(line, clue)
     result = []
     check_two = {UNKNOWN == x for x in line}
@@ -134,7 +131,6 @@ def solve_one(clue, int index,
         line[i] = UNKNOWN
     return True, result
 
-
 def write_intersection(lst, pic, is_row):
     cdef int i, j, val
     for i, j, val in lst:
@@ -145,14 +141,13 @@ def write_intersection(lst, pic, is_row):
             else:
                 pic.rows_to_solve[i] = True
 
-
 def solve_real(mapped_rows, mapped_cols, pic, depth, back_progress, contradicting=False, drawer=None):
     row_complexities = [pic.get_row_complexity(i) for i, _ in mapped_rows]
     col_complexities = [pic.get_col_complexity(i) for i, _ in mapped_cols]
 
     if Global.drawing:
         global last_draw_time
-        if time() - last_draw_time > 0.1:
+        if time() - last_draw_time > 0.15:
             if drawer:
                 drawer.draw_nonogram(pic.get_pixels(), row_complexities, col_complexities, back_progress)
             else:
@@ -180,8 +175,6 @@ def solve_real(mapped_rows, mapped_cols, pic, depth, back_progress, contradictin
         return
     yield from solve_real(mapped_rows, mapped_cols, pic, depth + 1, back_progress, contradicting, drawer=drawer)
 
-
-
 def solve_rows_or_cols(mapped, pic, is_row, depth):
     cdef long long complexity
 
@@ -208,7 +201,6 @@ def solve_rows_or_cols(mapped, pic, is_row, depth):
         write_intersection(pix_loc, pic, is_row)
     return True
 
-
 def recalculate_pixel_complexities(mapped_rows, mapped_cols, pic):
     rows = filter(lambda x: pic.get_row_complexity(x[0]) > 1,
                   map(lambda x: (x[0], x[1], True), mapped_rows))
@@ -217,9 +209,9 @@ def recalculate_pixel_complexities(mapped_rows, mapped_cols, pic):
     chained = chain(rows, cols)
     for index, clue, is_row in chained:
         if (is_row and not pic.row_changed_complexity(index)) \
-          or (not is_row and not pic.col_changed_complexity(index)):
+                or (not is_row and not pic.col_changed_complexity(index)):
             continue
-        line = pic.get_row(index, copying = False) if is_row else pic.get_col(index)
+        line = pic.get_row(index, copying=False) if is_row else pic.get_col(index)
         complexity = pic.get_row_complexity(index) if is_row else pic.get_col_complexity(index)
         for i, val in enumerate(line):
             if val != UNKNOWN:
@@ -234,15 +226,16 @@ def recalculate_pixel_complexities(mapped_rows, mapped_cols, pic):
                                      one_complexity=new_one)
     pic.store_current_complexities()
 
-
 def solve_contra(mapped_rows,
                  mapped_cols,
                  pic, depth: int, back_progress: list[str],
-                 min_neighs = 4, sorted_list = None, tested = None, drawer = None
+                 min_neighs = 4, sorted_list = None, tested = None, drawer = None, lookahead = 1
                  ):
+    lookahead -= 1
     if min_neighs == 4:
         recalculate_pixel_complexities(mapped_rows, mapped_cols, pic)
-        indexed = ((value, (index[0], index[1]), index[2]) for index, value in ndenumerate(pic.pixel_complexity) if value != iinfo(int64).max)
+        indexed = ((value, (index[0], index[1]), index[2]) for index, value in ndenumerate(pic.pixel_complexity) if
+                   value != iinfo(int64).max)
         sorted_list = sorted(indexed, key=lambda x: (-(pic.pixel_gain[x[1][0], x[1][1], x[2]] + 1), x[0]))
         tested = full((pic.height, pic.width, 2), False, dtype=bool)
     rjust_val_rows = 1 + int(log10(pic.height))
@@ -260,19 +253,20 @@ def solve_contra(mapped_rows,
         if tested[index[0], index[1], value]:
             continue
         tested[index[0], index[1], value] = True
-        pic2 = pic.copy_pic(small = True)
+        pic2 = pic.copy_pic(small=True)
         pic2.set_pixel(index, value)
         pic2.set_should_solve_row(index[0], True)
         pic2.set_should_solve_col(index[1], True)
         new_back_progress = back_progress + [
-          f"{neigh_count}r{index[0]:>{rjust_val_rows}d}c{index[1]:>{rjust_val_cols}d}: {f'{i/len_sorted:.0%}':>3}",
-          i,
-          len_sorted
+            f"{neigh_count}r{index[0]:>{rjust_val_rows}d}c{index[1]:>{rjust_val_cols}d}: {f'{i / len_sorted:.0%}':>3}",
+            i,
+            len_sorted
         ]
-        pic2 = next(solve_real(mapped_rows, mapped_cols, pic2, depth, new_back_progress, True, drawer = drawer), None)
+        pic2 = next(solve_real(mapped_rows, mapped_cols, pic2, depth, new_back_progress, True, drawer=drawer), None)
         if pic2 is not None:
             if not pic2.is_solved():
-                pic.pixel_gain[index[0], index[1], value] = pic2.count_matching_pixels(lambda x: x != UNKNOWN) - new_filled
+                pic.pixel_gain[index[0], index[1], value] = pic2.count_matching_pixels(
+                    lambda x: x != UNKNOWN) - new_filled
                 for diff in (pic2 - pic):
                     tested[diff] = True
                 continue
@@ -281,7 +275,7 @@ def solve_contra(mapped_rows,
         pic.set_pixel(index, value ^ 1)
         pic.set_should_solve_row(index[0], True)
         pic.set_should_solve_col(index[1], True)
-        pic = next(solve_real(mapped_rows, mapped_cols, pic, 0, [], True, drawer = drawer), None)
+        pic = next(solve_real(mapped_rows, mapped_cols, pic, 0, [], True, drawer=drawer), None)
         if pic is None:
             return
         if pic.is_solved():
@@ -296,12 +290,11 @@ def solve_contra(mapped_rows,
             yield from solve_backtrack(mapped_rows, mapped_cols, pic, depth, back_progress, sorted_list, drawer=drawer)
             return
         yield from solve_contra(mapped_rows, mapped_cols, pic, depth, back_progress,
-                                min_neighs - 1, sorted_list, tested, drawer = drawer)
+                                min_neighs - 1, sorted_list, tested, drawer=drawer)
         return
     sorted_list = None
     tested = None
-    yield from solve_real(mapped_rows, mapped_cols, pic, depth + 1, back_progress, drawer = drawer)
-
+    yield from solve_real(mapped_rows, mapped_cols, pic, depth + 1, back_progress, drawer=drawer)
 
 def solve_backtrack(mapped_rows,
                     mapped_cols,
@@ -320,7 +313,7 @@ def solve_backtrack(mapped_rows,
 
     rjust_val_rows = 1 + int(log10(pic.height))
     rjust_val_cols = 1 + int(log10(pic.width))
-    new_sols = [ value, value ^ 1 ]
+    new_sols = [value, value ^ 1]
     row, col = index
     for k, val in enumerate(new_sols):
         pic2 = pic.copy_pic()
@@ -332,17 +325,16 @@ def solve_backtrack(mapped_rows,
                               pic2,
                               1,
                               back_progress \
-                              + [f" r{row:>{rjust_val_rows}d}c{col:>{rjust_val_cols}d}: {f'{k/2:.0%}':>3}",
-                              k,
-                              2],
+                              + [f" r{row:>{rjust_val_rows}d}c{col:>{rjust_val_cols}d}: {f'{k / 2:.0%}':>3}",
+                                 k,
+                                 2],
                               drawer=drawer
-        )
-
+                              )
 
 def solve_check(pic,
-                 mapped_rows,
-                 mapped_cols,
-                 total = False) -> bool:
+                mapped_rows,
+                mapped_cols,
+                total = False) -> bool:
     cdef long long complexity
     for i, clue in mapped_rows:
         if not total:
@@ -358,7 +350,6 @@ def solve_check(pic,
             pic.solved_rows.add(i)
         pic.set_row_complexity(i, complexity)
 
-
     for i, clue in mapped_cols:
         if not pic.cols_to_solve[i]:
             continue
@@ -373,7 +364,6 @@ def solve_check(pic,
         pic.set_col_complexity(i, complexity)
     return True
 
-
 def solve_folder(loc, drawing=False, drawer=None) -> None:
     start = time()
     pic = Picture(1, 1)
@@ -385,7 +375,6 @@ def solve_folder(loc, drawing=False, drawer=None) -> None:
     print()
     print(f"All from {loc} on {Global.pool_size} threads: {time() - start}")
     print()
-
 
 def solve_file(location, drawing=False, cheated_pixels=[], number=-1, drawer=None):
     rows, cols = load_clues(location)
