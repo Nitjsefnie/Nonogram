@@ -6,11 +6,13 @@ from draw import NcursesDrawer
 
 
 def main():
-    drawer = NcursesDrawer()  # Default to terminal
+    drawer = NcursesDrawer()
     cpu_count = 100
     args = argv
     i = 1
     drawing = False
+    lookahead = 0
+    number = -1
 
     while i < len(args):
         if drawer and not drawing:
@@ -18,14 +20,13 @@ def main():
         arg = args[i]
         if arg == "--solve-file":
             if i + 1 < len(args):
-                rows, cols = load_clues(args[i + 1])
-                solve_file(args[i + 1], drawing=drawing, drawer=drawer)
+                solve_file(args[i + 1], drawing=drawing, drawer=drawer, lookahead=lookahead, number=number)
                 i += 2
             else:
                 return
         elif arg == "--solve-folder":
             if i + 1 < len(args):
-                solve_folder(args[i + 1], drawing=drawing, drawer=drawer)
+                solve_folder(args[i + 1], drawing=drawing, drawer=drawer, lookahead=lookahead)
                 i += 2
             else:
                 return
@@ -47,6 +48,12 @@ def main():
                 i += 2
             else:
                 return
+        elif arg == "--lookahead":
+            if i + 1 < len(args):
+                lookahead = int(args[i + 1])
+                i += 2
+            else:
+                return
         elif arg == "--draw-method":
             if i + 1 < len(args):
                 draw_method = args[i + 1]
@@ -57,11 +64,19 @@ def main():
                 i += 2
             else:
                 return
+        elif arg == "-n":
+            if i + 1 < len(args):
+                number = args[i + 1]
+                i += 2
+            else:
+                return
+        elif arg == "--resort-all":
+            solve_sort_all()
+            i+= 1
         else:
             return
 
     if drawing and drawer is not None:
-        drawer.wait_for_quit()
         drawer.endwin()
 
 

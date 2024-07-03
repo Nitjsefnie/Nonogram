@@ -1,7 +1,8 @@
 import curses
-from itertools import islice
+from re import findall
 from math import log10
-
+from time import time, sleep
+from pool import terminate_pool
 
 def every_second(lst):
     p = 0
@@ -14,28 +15,38 @@ def every_second(lst):
         p += lst[i - 1]
     yield f"{(p / q):5%}"
 
-
 class NcursesDrawer:
     def __init__(self):
         self.stdscr = curses.initscr()
         curses.cbreak()
+        curses.noecho()
         self.stdscr.keypad(True)
         curses.start_color()
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Full cell
         curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)  # Empty cell
         curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_YELLOW)  # Unknown cell
+        curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)  # Highlighted cell
         self.cell_size = 2  # Adjust cell size if needed
         self.previous_frame = None  # Buffer to store the previous frame
         self.max_backtrack_offset_x = 1
         self.max_row_comp_offset = 1
         self.max_col_comp_length = 1
+        self.paused = False  # Flag to control pause functionality
+        self.back_progress = []
+        self.next_back_progress = False
+        self.draw_interval = 0.2
+        self.last_draw = time()
+        self.highlighted_cells = set()
 
     def draw_nonogram(self, nonogram, row_complexities, col_complexities, back_progress):
-        self._draw_on_ncurses(nonogram, row_complexities, col_complexities, back_progress)
+        if time() - self.last_draw > self.draw_interval:
+            self.last_draw = time()
+            self._draw_on_ncurses(nonogram, row_complexities, col_complexities, back_progress)
 
     def _draw_on_ncurses(self, nonogram, row_complexities, col_complexities, back_progress):
         rows = len(nonogram)
         cols = len(nonogram[0])
+        self.highlighted_cells = set()
 
         # Get the dimensions of the terminal window
         max_y, max_x = self.stdscr.getmaxyx()
@@ -49,7 +60,7 @@ class NcursesDrawer:
 
         # Calculate the horizontal offset for backtrack progress
         self.max_row_comp_offset = complexity_shift = max(2 + int(log10(max(row_complexities))), self.max_row_comp_offset)
-        self.max_backtrack_offset_x = backtrack_offset_x = max(cols * self.cell_size + 9 + complexity_shift,  self.max_backtrack_offset_x)
+        self.max_backtrack_offset_x = backtrack_offset_x = max(cols * self.cell_size + 9 + complexity_shift, self.max_backtrack_offset_x)
 
         # Draw column indexes vertically at the top
         for j in range(cols):
@@ -105,7 +116,7 @@ class NcursesDrawer:
         for y in range(grid_start_y, max_y):
             self.stdscr.addstr(y, self.max_backtrack_offset_x, ' ' * (max_x - self.max_backtrack_offset_x - 1))
 
-        # Draw backtrack progress
+        # Draw backtrack progress and highlight corresponding cells
         if back_progress:
             it = every_second(back_progress)
             builder = "backtrack progress:"
@@ -118,8 +129,14 @@ class NcursesDrawer:
 
             progress = next(it, None)
             while progress is not None:
-            #for progress in it:
                 progress_str = str(progress)
+                matches = findall(r'([0-9 ]*)r *([0-9]*)c[ ]*([0-9]*): *[0-9]*%', progress_str)
+                if matches:
+                    match = matches[0]
+                    symbol = "??" if match[0] == " " else match[0] * 2
+                    row, col = int(match[1]), int(match[2])
+                    self.highlighted_cells.add((symbol, row, col))
+
                 if x_pos + len(progress_str) + 3 > max_width:  # +3 for the " | " separator
                     y_pos += 1
                     x_pos = self.max_backtrack_offset_x
@@ -130,13 +147,69 @@ class NcursesDrawer:
                     if progress and x_pos + 3 <= max_width:  # Add separator if there is space
                         self.stdscr.addstr(y_pos, x_pos - 3, " | ")
 
+        # Highlight the cells
+        for (symbol, row, col) in self.highlighted_cells:
+            break
+            if 0 <= row < rows and 0 <= col < cols:
+                x = col * self.cell_size + 6
+                y = row + grid_start_y
+                if y < max_y and x < max_x:
+                    self.stdscr.addstr(y, x, symbol, curses.color_pair(1 if nonogram[row, col] == 1 else 2))
+        self.highlighted_cells = set()
+        if back_progress is not self.back_progress:
+            self.next_back_progress = False
+        self._set_cursor_to_bottom()
         self.stdscr.refresh()
+        self._pause_loop(back_progress)
+        self._check_for_key(back_progress)
 
-    def wait_for_quit(self):
+    def _check_for_key(self, back_progress):
+        self.stdscr.nodelay(True)
         while True:
             key = self.stdscr.getch()
-            if key == ord('q'):
+            if key == curses.ERR:
+                break  # No key press detected, continue drawing
+            elif key == ord('q'):
+                self.endwin()
+                terminate_pool()
+                exit()
+            elif key == ord('p'):
+                self.paused = not self.paused
+                if not self.paused:
+                    break  # Continue drawing when unpaused
+                self._pause_loop(back_progress)
+            elif key == ord('s') and self.paused:
+                break  # Draw the next step
+            elif key == ord('n') and self.paused:
+                self.back_progress = back_progress
+                self.next_back_progress = True
+            elif key == ord('+'):
+                self.draw_interval += 0.05
+            elif key == ord('-'):
+                self.draw_interval = max(0, self.draw_interval-0.05)
+
+    def _pause_loop(self, back_progress):
+        if self.next_back_progress and self.back_progress is back_progress:
+            return
+        while self.paused:
+            key = self.stdscr.getch()
+            if key == ord('p'):
+                self.paused = False
+            elif key == ord('q'):
+                self.endwin()
+                terminate_pool()
+                exit()
+            elif key == ord('s'):
+                break  # Draw the next step while paused
+            elif key == ord('n'):
+                self.back_progress = back_progress
+                self.next_back_progress = True
                 break
+            sleep(0.1)
+
+    def _set_cursor_to_bottom(self):
+        max_y, _ = self.stdscr.getmaxyx()
+        self.stdscr.move(max_y - 1, 0)
 
     def endwin(self):
         curses.nocbreak()

@@ -8,7 +8,7 @@ class StringBuilder:
                 if isinstance(value, str):
                     self.values.append(value)
                 else:
-                    self.values.add(str(value))
+                    self.values.append(str(value))
             self.values.append(sep)
         self.values.pop()
         self.values.append(end)

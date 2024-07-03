@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Tuple, List
 from numpy import array, ndarray, int8
 from picture import Picture
@@ -22,6 +23,7 @@ def save_picture(pic: Picture, filename: str):
             f.write(''.join('.' if p == EMPTY else '#' if p == FULL else '?' for p in line))
             f.write('\n')
 
+@lru_cache(maxsize=2 ** 10)
 def load_clues(filename: str) -> Tuple[List[List[int]], List[List[int]]]:
     with open(filename) as f:
         content: List[str] = [x.strip() for x in f.readlines()]

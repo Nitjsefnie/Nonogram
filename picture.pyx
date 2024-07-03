@@ -7,7 +7,7 @@ class Picture:
     __slots__ = ('height', 'width', '__pixels',
                  'solved_rows', 'solved_cols', 'rows_to_solve', 'cols_to_solve',
                  'trc', 'tcc', 'old_trc', 'old_tcc',
-                 'pixel_complexity', 'pixel_gain')
+                 'pixel_complexity', 'pixel_gain', 'correct_pixels')
 
     def __init__(self, int height, int width, *, bint generating=True):
         self.height: int = height
@@ -15,9 +15,10 @@ class Picture:
 
         if generating:
             self.__pixels: ndarray = full((height, width), UNKNOWN, dtype=int8)
+            self.correct_pixels = full((height, width), False, dtype=bool)
 
-            self.solved_rows: Set[int] = set()
-            self.solved_cols: Set[int] = set()
+            self.solved_rows: set[int] = set()
+            self.solved_cols: set[int] = set()
 
             self.rows_to_solve: ndarray = full(height, True, dtype=bool)
             self.cols_to_solve: ndarray = full(width, True, dtype=bool)
@@ -34,9 +35,10 @@ class Picture:
 
         else:
             self.__pixels: Optional[ndarray] = None
+            self.correct_pixels = None
 
-            self.solved_rows: Optional[Set[int]] = None
-            self.solved_cols: Optional[Set[int]] = None
+            self.solved_rows: Optional[set[int]] = None
+            self.solved_cols: Optional[set[int]] = None
 
             self.rows_to_solve: Optional[ndarray] = None
             self.cols_to_solve: Optional[ndarray] = None
@@ -120,6 +122,7 @@ class Picture:
         pic2.cols_to_solve = self.cols_to_solve.copy()
         pic2.trc = self.trc.copy()
         pic2.tcc = self.tcc.copy()
+        pic2.correct_pixels = self.correct_pixels
         if not small:
             pic2.pixel_complexity = self.pixel_complexity.copy()
             pic2.pixel_gain = self.pixel_gain.copy()
