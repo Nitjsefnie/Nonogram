@@ -1,5 +1,4 @@
 SIZE = 15
-#PIXELS = [0, 0, 1, 1, 1]
 PIXELS = [0, 1]
 THREAD_COUNT = 12
 
@@ -8,7 +7,6 @@ from random import choice
 from os import getpid
 from datetime import datetime
 
-#draw_steps(True)
 
 def generate_nonogram(height, width):
     pic = Picture(height, width)
@@ -38,9 +36,5 @@ while True:
     print(getpid(), result_time, len(pic2))
     if result_time < 300:
         continue
-    #if pic.pixels != pic2.pixels:
-        #print("pics differ")
-        #draw(pic.pixels)
-        #draw(pic2.pixels)
     save_clues("random_outputs/" + str(SIZE) + "/" + str(result_time), row_clues, col_clues)
 terminate_pool()
