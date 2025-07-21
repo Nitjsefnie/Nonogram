@@ -1,6 +1,7 @@
 import curses
 from re import findall
 from math import log10
+import sys
 from time import time, sleep
 from pool import terminate_pool
 
@@ -172,7 +173,7 @@ class NcursesDrawer:
             elif key == ord('q'):
                 self.endwin()
                 terminate_pool()
-                exit()
+                sys.exit()
             elif key == ord('p'):
                 self.paused = not self.paused
                 if not self.paused:
@@ -198,7 +199,7 @@ class NcursesDrawer:
             elif key == ord('q'):
                 self.endwin()
                 terminate_pool()
-                exit()
+                sys.exit()
             elif key == ord('s'):
                 break  # Draw the next step while paused
             elif key == ord('n'):
