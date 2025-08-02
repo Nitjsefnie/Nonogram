@@ -1,14 +1,15 @@
 from numpy import ndarray, array, int16
-from libc.stdint cimport int16_t
 
-cdef int EMPTY = 0, FULL = 1, UNKNOWN = 2
+EMPTY = 0
+FULL = 1
+UNKNOWN = 2
 
-cpdef int16_t[:] gen_line_clues(line):
+
+def gen_line_clues(line):
     if line.size == 0:
         return array([], dtype=int16)
-    cdef list result = []
-    cdef int count = 0
-    cdef int val
+    result = []
+    count = 0
     for val in line:
         if val == FULL:
             count += 1
@@ -21,10 +22,9 @@ cpdef int16_t[:] gen_line_clues(line):
     return array(result, dtype=int16)
 
 
-cpdef bint check_line(clue, size):
-    cdef int length = len(clue)
-    cdef int summ = 0
-    cdef int i
+def check_line(clue, size):
+    length = len(clue)
+    summ = 0
 
     if length == 1:
         return clue[0] <= size

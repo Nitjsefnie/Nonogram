@@ -4,12 +4,17 @@ from io import StringIO
 
 
 def fetch_webpbn(num):
-    data = {"go": 1, "id": num, "xml_clue": "on", "fmt": "xml", "xml_soln": "on"}
+    data = {
+        "go": 1,
+        "id": num,
+        "xml_clue": "on",
+        "fmt": "xml",
+        "xml_soln": "on"}
     url = "https://webpbn.com/export.cgi/webpbn%06i.sgriddler" % num
     try:
         text = requests.post(url, data).text
         return parse_clues(text)
-    except:
+    except BaseException:
         return None
 
 
