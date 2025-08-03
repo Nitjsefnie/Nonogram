@@ -1,4 +1,4 @@
-from numpy import ndarray, array, int16
+from numpy import array, int16
 
 EMPTY = 0
 FULL = 1
