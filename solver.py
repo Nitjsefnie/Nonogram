@@ -13,13 +13,12 @@ from numpy import full, int64, ndenumerate, iinfo
 
 setrecursionlimit(10000)
 
-Pixel = int
 EMPTY, FULL, UNKNOWN = 0, 1, 2
 
 start_time = time()
 
 
-def clues_valid(rows, cols) -> bool:
+def clues_valid(rows, cols):
     return (sum(map(sum, rows)) == sum(map(sum, cols))
             and all(check_line(r, len(cols)) for r in rows)
             and all(check_line(c, len(rows)) for c in cols))
@@ -444,7 +443,7 @@ def solve_backtrack(
             lookahead=lookahead)
 
 
-def solve_check(pic, mapped_rows, mapped_cols, total=False) -> bool:
+def solve_check(pic, mapped_rows, mapped_cols, total=False):
     for i, clue in mapped_rows:
         if not total and not pic.rows_to_solve[i]:
             continue
@@ -474,7 +473,7 @@ def solve_check(pic, mapped_rows, mapped_cols, total=False) -> bool:
     return True
 
 
-def solve_folder(loc, lookahead=0) -> None:
+def solve_folder(loc, lookahead=0):
     start = time()
     for file in sorted(join(loc, f)
                         for f in listdir(loc) if isfile(join(loc, f))):

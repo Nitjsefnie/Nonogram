@@ -1,5 +1,4 @@
-from numpy import ndarray, full, int8, int32, int64, count_nonzero, iinfo, where
-from typing import Optional, Tuple, Union, Callable
+from numpy import full, int8, int32, int64, count_nonzero, iinfo, where
 
 EMPTY = 0
 FULL = 1
@@ -24,50 +23,50 @@ class Picture:
         'correct_pixels')
 
     def __init__(self, height, width, *, generating=True):
-        self.height: int = height
-        self.width: int = width
+        self.height = height
+        self.width = width
 
         if generating:
             self.__pixels = full((height, width), UNKNOWN, dtype=int8)
             self.correct_pixels = full((height, width), False, dtype=bool)
 
-            self.solved_rows: set[int] = set()
-            self.solved_cols: set[int] = set()
+            self.solved_rows = set()
+            self.solved_cols = set()
 
-            self.rows_to_solve: ndarray = full(height, True, dtype=bool)
-            self.cols_to_solve: ndarray = full(width, True, dtype=bool)
+            self.rows_to_solve = full(height, True, dtype=bool)
+            self.cols_to_solve = full(width, True, dtype=bool)
 
-            self.trc: ndarray = full(height, 1, dtype=int64)
-            self.tcc: ndarray = full(width, 1, dtype=int64)
+            self.trc = full(height, 1, dtype=int64)
+            self.tcc = full(width, 1, dtype=int64)
 
-            self.pixel_complexity: ndarray = full(
+            self.pixel_complexity = full(
                 (height, width, 2), iinfo(int64).max, dtype=int64)
 
-            self.pixel_gain: ndarray = full(
+            self.pixel_gain = full(
                 (height, width, 2), iinfo(int32).min, dtype=int32)
 
-            self.old_trc: ndarray = full(height, iinfo(int64).max, dtype=int64)
-            self.old_tcc: ndarray = full(width, iinfo(int64).max, dtype=int64)
+            self.old_trc = full(height, iinfo(int64).max, dtype=int64)
+            self.old_tcc = full(width, iinfo(int64).max, dtype=int64)
 
         else:
-            self.__pixels: Optional[ndarray] = None
+            self.__pixels = None
             self.correct_pixels = None
 
-            self.solved_rows: Optional[set[int]] = None
-            self.solved_cols: Optional[set[int]] = None
+            self.solved_rows = None
+            self.solved_cols = None
 
-            self.rows_to_solve: Optional[ndarray] = None
-            self.cols_to_solve: Optional[ndarray] = None
+            self.rows_to_solve = None
+            self.cols_to_solve = None
 
-            self.trc: Optional[ndarray] = None
-            self.tcc: Optional[ndarray] = None
+            self.trc = None
+            self.tcc = None
 
-            self.pixel_complexity: Optional[ndarray] = None
+            self.pixel_complexity = None
 
-            self.pixel_gain: Optional[ndarray] = None
+            self.pixel_gain = None
 
-            self.old_trc: Optional[ndarray] = None
-            self.old_tcc: Optional[ndarray] = None
+            self.old_trc = None
+            self.old_tcc = None
 
     def __bool__(self):
         raise ValueError("Boolean evaluation is not allowed")
@@ -129,7 +128,7 @@ class Picture:
         self.cols_to_solve[col] = val
 
     def copy_pic(self, *, small=False):
-        pic2: Picture = Picture(self.height, self.width, generating=False)
+        pic2 = Picture(self.height, self.width, generating=False)
         pic2.__pixels = self.__pixels.copy()
         pic2.solved_rows = set(self.solved_rows)
         pic2.solved_cols = set(self.solved_cols)
@@ -171,13 +170,11 @@ class Picture:
         self.__pixels[row, col] = value
 
     def set_pixel_complexity(self,
-                             row_col: Union[Tuple[int,
-                                                  int],
-                                            int],
-                             col: Optional[int] = None,
+                             row_col,
+                             col=None,
                              *,
-                             zero_complexity: Optional[int64] = None,
-                             one_complexity: Optional[int64] = None):
+                             zero_complexity=None,
+                             one_complexity=None):
         if isinstance(row_col, tuple):
             row, col = row_col
         else:
@@ -191,14 +188,14 @@ class Picture:
         if one_complexity is not None and one_complexity < self.pixel_complexity[row, col, 1]:
             self.pixel_complexity[row, col, 1] = one_complexity
 
-    def get_pixels(self) -> ndarray:
+    def get_pixels(self):
         return self.__pixels
 
-    def count_matching_pixels(self, predicate: Callable[[int], bool]) -> int:
+    def count_matching_pixels(self, predicate):
         return count_nonzero(predicate(self.__pixels))
 
     def count_neighbours(
-            self, row_col: Union[Tuple[int, int], int], col: Optional[int] = None) -> int:
+            self, row_col, col=None):
         if isinstance(row_col, tuple):
             row, col = row_col
         else:
