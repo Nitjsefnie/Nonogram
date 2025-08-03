@@ -136,10 +136,13 @@ def solve_real(
             pic,
             mapped_rows,
             mapped_cols,
-            depth != 0):
+            depth != 0,
+            drawer=drawer):
         return
 
     if pic.is_solved():
+        if hasattr(drawer, "add_solution"):
+            drawer.add_solution(pic)
         yield pic
         return
 
@@ -445,7 +448,7 @@ def solve_backtrack(
             lookahead=lookahead)
 
 
-def solve_check(pic, mapped_rows, mapped_cols, total=False):
+def solve_check(pic, mapped_rows, mapped_cols, total=False, *, drawer=None):
     for i, clue in mapped_rows:
         if not total and not pic.rows_to_solve[i]:
             continue
@@ -472,21 +475,25 @@ def solve_check(pic, mapped_rows, mapped_cols, total=False):
             pic.solved_cols.add(i)
         pic.set_col_complexity(i, complexity)
 
+    if hasattr(drawer, "update_progress"):
+        drawer.update_progress(pic)
+
     return True
 
 
-def solve_folder(loc, lookahead=0):
+def solve_folder(loc, drawer=None, lookahead=0):
     start = time()
     for file in sorted(join(loc, f)
                         for f in listdir(loc) if isfile(join(loc, f))):
         pool_manager.reset_pool()
-        solve_file(file, lookahead=lookahead)
+        solve_file(file, drawer=drawer, lookahead=lookahead)
 
     print(f"\nAll from {loc} on {pool_manager.pool_size} threads: {time() - start}\n")
 
 
 def solve_file(
         location,
+        drawer=None,
         cheated_pixels=None,
         number=-1,
         lookahead=0):
@@ -502,6 +509,7 @@ def solve_file(
             rows,
             cols,
             cheated_pixels=cheated_pixels,
+            drawer=drawer,
             lookahead=lookahead):
         i += 1
         print(f"{i}", end=' ')
