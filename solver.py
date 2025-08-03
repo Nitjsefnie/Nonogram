@@ -60,7 +60,10 @@ def states_pregen(clue):
     return tuple(states)
 
 
-def solve(rows, cols, cheated_pixels=[], drawer=None, lookahead=0):
+def solve(rows, cols, cheated_pixels=None, drawer=None, lookahead=0):
+    if cheated_pixels is None:
+        cheated_pixels = []
+
     pic = Picture(len(rows), len(cols))
 
     for row, col, val in cheated_pixels:
