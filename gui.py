@@ -5,16 +5,18 @@ from PyQt5.QtWidgets import (QApplication, QFileDialog, QPushButton,
                              QVBoxLayout, QWidget)
 
 import solver
+from drawer import QtDrawer
 
 
 class SolveThread(Thread):
-    def __init__(self, func, path):
+    def __init__(self, func, path, drawer=None):
         super().__init__(daemon=True)
         self.func = func
         self.path = path
+        self.drawer = drawer
 
     def run(self):
-        self.func(self.path)
+        self.func(self.path, drawer=self.drawer)
 
 
 class MainWindow(QWidget):
@@ -37,14 +39,16 @@ class MainWindow(QWidget):
     def solve_file(self):
         path, _ = QFileDialog.getOpenFileName(self, "Select puzzle file")
         if path:
-            thread = SolveThread(solver.solve_file, path)
+            drawer = QtDrawer()
+            thread = SolveThread(solver.solve_file, path, drawer=drawer)
             self.threads.append(thread)
             thread.start()
 
     def solve_folder(self):
         path = QFileDialog.getExistingDirectory(self, "Select folder")
         if path:
-            thread = SolveThread(solver.solve_folder, path)
+            drawer = QtDrawer()
+            thread = SolveThread(solver.solve_folder, path, drawer=drawer)
             self.threads.append(thread)
             thread.start()
 
