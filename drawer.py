@@ -1,24 +1,20 @@
 import os
+from multiprocessing import Process, Queue
+from queue import Empty, Full
+
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor, QImage, QPainter, QPixmap
+from PyQt5.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
+                             QVBoxLayout, QWidget)
+
+from constants import EMPTY, FULL, UNKNOWN
 
 # Enable headless mode to allow running without a display
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt5.QtWidgets import (
-    QApplication,
-    QLabel,
-    QWidget,
-    QPushButton,
-    QHBoxLayout,
-    QVBoxLayout,
-)
-from PyQt5.QtGui import QPixmap, QImage, QPainter, QColor
-from PyQt5.QtCore import Qt
 
-from constants import EMPTY, FULL, UNKNOWN
-
-
-class QtDrawer:
-    """Simple PyQt5 drawer for the Nonogram solver."""
+class _QtDrawer:
+    """Simple PyQt5 drawer that performs the actual rendering."""
 
     def __init__(self, cell_size: int = 20):
         self.app = QApplication.instance() or QApplication([])
@@ -39,8 +35,8 @@ class QtDrawer:
         self.solution_widget.setWindowTitle("Solutions")
         self.solution_label = QLabel()
         self.solution_label.setAlignment(Qt.AlignCenter)
-        self.prev_button = QPushButton("◀")
-        self.next_button = QPushButton("▶")
+        self.prev_button = QPushButton("\u25C0")
+        self.next_button = QPushButton("\u25B6")
         self.prev_button.clicked.connect(self.prev_solution)
         self.next_button.clicked.connect(self.next_solution)
         buttons = QHBoxLayout()
@@ -57,22 +53,20 @@ class QtDrawer:
         self._update_button_visibility()
 
     # ------------------------------------------------------------------
-    # public API used by solver
-    def update_progress(self, pic):
-        """Update the progress window with the current picture."""
-        self._ensure_size(pic)
-        self.progress_label.setPixmap(self._pixmap_from_picture(pic))
+    # public API used by worker process
+    def update_progress(self, arr):
+        """Update the progress window with the current picture array."""
+        self._ensure_size(arr)
+        self.progress_label.setPixmap(self._pixmap_from_array(arr))
         self.progress_label.show()
-        self.app.processEvents()
 
-    def add_solution(self, pic):
+    def add_solution(self, arr):
         """Store a newly found solution and update the solution window."""
-        self._ensure_size(pic)
-        self.solutions.append(pic.get_pixels().copy())
+        self._ensure_size(arr)
+        self.solutions.append(arr.copy())
         self.index = len(self.solutions) - 1
         self.solution_widget.show()
         self._display_current_solution()
-        self.app.processEvents()
 
     # ------------------------------------------------------------------
     # navigation callbacks
@@ -88,13 +82,14 @@ class QtDrawer:
 
     # ------------------------------------------------------------------
     # helpers
-    def _ensure_size(self, pic):
-        if self.height != pic.height or self.width != pic.width:
-            self.height = pic.height
-            self.width = pic.width
-            w, h = self.width * self.cell, self.height * self.cell
-            self.progress_label.resize(w, h)
-            self.solution_label.resize(w, h)
+    def _ensure_size(self, arr):
+        h, w = arr.shape
+        if self.height != h or self.width != w:
+            self.height = h
+            self.width = w
+            w_px, h_px = self.width * self.cell, self.height * self.cell
+            self.progress_label.resize(w_px, h_px)
+            self.solution_label.resize(w_px, h_px)
 
     def _display_current_solution(self):
         if not self.solutions:
@@ -108,10 +103,9 @@ class QtDrawer:
         self.prev_button.setVisible(multiple)
         self.next_button.setVisible(multiple)
         self.prev_button.setEnabled(multiple and self.index > 0)
-        self.next_button.setEnabled(multiple and self.index < len(self.solutions) - 1)
-
-    def _pixmap_from_picture(self, pic):
-        return self._pixmap_from_array(pic.get_pixels())
+        self.next_button.setEnabled(
+            multiple and self.index < len(
+                self.solutions) - 1)
 
     def _pixmap_from_array(self, arr):
         h, w = arr.shape
@@ -135,5 +129,55 @@ class QtDrawer:
         return QPixmap.fromImage(img)
 
 
-__all__ = ["QtDrawer"]
+def _drawer_process(queue: Queue, cell_size: int) -> None:
+    drawer = _QtDrawer(cell_size)
+    while True:
+        try:
+            msg, data = queue.get(timeout=0.05)
+        except Empty:
+            drawer.app.processEvents()
+            continue
+        if msg == "update":
+            drawer.update_progress(data)
+        elif msg == "solution":
+            drawer.add_solution(data)
+        elif msg == "stop":
+            break
+        drawer.app.processEvents()
 
+
+class QtDrawer:
+    """Proxy that delegates drawing to a separate process."""
+
+    def __init__(self, cell_size: int = 20, queue_size: int = 5):
+        self._queue: Queue = Queue(maxsize=queue_size)
+        self._process = Process(
+            target=_drawer_process, args=(self._queue, cell_size), daemon=True
+        )
+        self._process.start()
+
+    def update_progress(self, pic):
+        try:
+            self._queue.put_nowait(("update", pic.get_pixels().copy()))
+        except Full:
+            pass
+
+    def add_solution(self, pic):
+        try:
+            self._queue.put_nowait(("solution", pic.get_pixels().copy()))
+        except Full:
+            pass
+
+    def close(self):
+        try:
+            self._queue.put_nowait(("stop", None))
+        except Full:
+            pass
+        self._process.join(timeout=0.2)
+
+    def __del__(self):  # pragma: no cover - defensive cleanup
+        if self._process.is_alive():
+            self.close()
+
+
+__all__ = ["QtDrawer"]
