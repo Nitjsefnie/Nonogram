@@ -1,10 +1,8 @@
 from functools import lru_cache
 from numpy import array, int8
-from picture import Picture
 
-EMPTY = 0
-FULL = 1
-UNKNOWN = 2
+from constants import EMPTY, FULL, UNKNOWN
+from picture import Picture
 
 
 def load_picture(filename):

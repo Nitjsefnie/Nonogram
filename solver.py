@@ -1,7 +1,7 @@
 from utils import check_line
-from globalvars import Global
-from pool import reset_pool
 from io_utils import *
+from constants import EMPTY, FULL, UNKNOWN
+from pool_manager import pool_manager
 
 from time import time
 from os import listdir
@@ -12,8 +12,6 @@ from itertools import chain
 from numpy import full, int64, ndenumerate, iinfo
 
 setrecursionlimit(10000)
-
-EMPTY, FULL, UNKNOWN = 0, 1, 2
 
 start_time = time()
 
@@ -133,7 +131,7 @@ def solve_real(
     global start_time
     if time() - start_time > 60:
         start_time = time()
-        reset_pool()
+        pool_manager.reset_pool()
     if not solve_check(
             pic,
             mapped_rows,
@@ -179,8 +177,9 @@ def solve_rows_or_cols(mapped, pic, is_row, correct_pixels=False):
             else:
                 pic.cols_to_solve[i] = False
 
-    res = list(map(lambda args: solve_one(*args), solve_these)) if Global.pool_size == 1 else Global.pool.starmap(
-        solve_one, solve_these)
+    res = (list(map(lambda args: solve_one(*args), solve_these))
+           if pool_manager.pool_size == 1 else pool_manager.pool.starmap(
+               solve_one, solve_these))
     for boo, pix_loc in res:
         if not boo:
             return False
@@ -480,10 +479,10 @@ def solve_folder(loc, lookahead=0):
     start = time()
     for file in sorted(join(loc, f)
                         for f in listdir(loc) if isfile(join(loc, f))):
-        reset_pool()
+        pool_manager.reset_pool()
         solve_file(file, lookahead=lookahead)
 
-    print(f"\nAll from {loc} on {Global.pool_size} threads: {time() - start}\n")
+    print(f"\nAll from {loc} on {pool_manager.pool_size} threads: {time() - start}\n")
 
 
 def solve_file(
@@ -509,6 +508,6 @@ def solve_file(
         # save_picture(pic, f'{location}.{i}')
         if i == number:
             break
-    print(f"{location} on {Global.pool_size} threads: {time() - start}, found {i} solutions")
+    print(f"{location} on {pool_manager.pool_size} threads: {time() - start}, found {i} solutions")
 
     return i
