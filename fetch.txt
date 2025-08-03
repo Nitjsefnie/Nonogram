@@ -3,11 +3,11 @@ from multiprocessing import freeze_support
 
 from new import *
 from solver import *
-from pool import reset_pool, terminate_pool, change_pool_size
+from pool_manager import pool_manager
 
 
 def foo():
-    change_pool_size()
+    pool_manager.change_pool_size()
     i = 1380
     not_found = 0
     found = 0
@@ -22,7 +22,7 @@ def foo():
             os.makedirs('demo_nonograms/webpbn', exist_ok=True)
             with open(f"demo_nonograms/webpbn/{i}", "w") as file:
                 file.write(text)
-            reset_pool()
+            pool_manager.reset_pool()
             start = time()
             solutions = solve_file(f"demo_nonograms/webpbn/{i}", number=max_sols)
             solve_time = time() - start
@@ -45,4 +45,4 @@ def foo():
 if __name__ == '__main__':
     freeze_support()
     foo()
-    terminate_pool()
+    pool_manager.terminate_pool()

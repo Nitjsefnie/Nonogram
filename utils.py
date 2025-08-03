@@ -1,8 +1,6 @@
 from numpy import array, int16
 
-EMPTY = 0
-FULL = 1
-UNKNOWN = 2
+from constants import EMPTY, FULL, UNKNOWN
 
 
 def gen_line_clues(line):

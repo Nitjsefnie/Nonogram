@@ -1,8 +1,6 @@
 from numpy import full, int8, int32, int64, count_nonzero, iinfo, where
 
-EMPTY = 0
-FULL = 1
-UNKNOWN = 2
+from constants import EMPTY, FULL, UNKNOWN
 
 
 class Picture:
