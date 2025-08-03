@@ -13,23 +13,15 @@ def gen_line_clues(line):
     for val in line:
         if val == FULL:
             count += 1
-        elif count > 0:
+        elif count:
             result.append(count)
             count = 0
-
     if count:
         result.append(count)
     return array(result, dtype=int16)
 
 
 def check_line(clue, size):
-    length = len(clue)
-    summ = 0
-
-    if length == 1:
+    if len(clue) == 1:
         return clue[0] <= size
-
-    for i in range(length):
-        summ += clue[i]
-
-    return summ + length - 1 <= size
+    return sum(clue) + len(clue) - 1 <= size

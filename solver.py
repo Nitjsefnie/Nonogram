@@ -3,14 +3,13 @@ from globalvars import Global
 from pool import reset_pool
 from io_utils import *
 
-from time import time, sleep
-from os import listdir, getenv, rename
+from time import time
+from os import listdir
 from os.path import isfile, join
 from sys import setrecursionlimit
 from math import log10
 from itertools import chain
 from numpy import full, int64, ndenumerate, iinfo
-from functools import lru_cache, wraps
 
 setrecursionlimit(10000)
 
@@ -21,52 +20,13 @@ start_time = time()
 
 
 def clues_valid(rows, cols) -> bool:
-    height = len(rows)
-    width = len(cols)
-    row_sum = 0
-    col_sum = 0
-
-    for row in rows:
-        row_sum += sum(row)
-        if not check_line(row, width):
-            return False
-
-    for col in cols:
-        col_sum += sum(col)
-        if not check_line(col, height):
-            return False
-
-    return row_sum == col_sum
+    row_sum = sum(map(sum, rows))
+    col_sum = sum(map(sum, cols))
+    return (row_sum == col_sum
+            and all(check_line(r, len(cols)) for r in rows)
+            and all(check_line(c, len(rows)) for c in cols))
 
 
-def conditional_lru_cache(func):
-    cached_func = lru_cache(maxsize=2 ** 20)(func)
-
-    @wraps(func)
-    def wrapper(arg1, arg2=None):
-        if getenv('IS_CHILD_PROCESS') == '1':
-            return func(arg1, arg2)
-        else:
-            return func(arg1, arg2)
-            return cached_func(
-                arg1.tobytes() if isinstance(
-                    arg1, ndarray) else tuple(arg1), arg2)
-
-    def cache_info():
-        if getenv('IS_CHILD_PROCESS') != '1':
-            return cached_func.cache_info()
-
-    def cache_clear():
-        if getenv('IS_CHILD_PROCESS') != '1':
-            cached_func.cache_clear()
-
-    wrapper.cache_info = cache_info
-    wrapper.cache_clear = cache_clear
-
-    return wrapper
-
-
-# @conditional_lru_cache
 def len_gen_lines(line, states):
     len_states = len(states)
     states_dict = {0: 1}
@@ -75,27 +35,27 @@ def len_gen_lines(line, states):
         new_dict = {}
         for state, count in states_dict.items():
             state_next = state + 1
+            cur_state = states[state]
+            next_state = states[state_next] if state_next < len_states else None
+
             if val == UNKNOWN:
-                if state_next < len_states:
+                if next_state is not None:
                     new_dict[state_next] = new_dict.get(state_next, 0) + count
-                if states[state] == EMPTY:
+                if cur_state == EMPTY:
                     new_dict[state] = new_dict.get(state, 0) + count
             elif val == EMPTY:
-                if state_next < len_states and states[state_next] == EMPTY:
+                if next_state == EMPTY:
                     new_dict[state_next] = new_dict.get(state_next, 0) + count
-                if states[state] == EMPTY:
+                if cur_state == EMPTY:
                     new_dict[state] = new_dict.get(state, 0) + count
-            elif val == FULL and state_next < len_states and states[state_next] == FULL:
+            elif val == FULL and next_state == FULL:
                 new_dict[state_next] = new_dict.get(state_next, 0) + count
 
         states_dict = new_dict
-
-    return states_dict.get(len_states - 1, 0) + \
-        states_dict.get(len_states - 2, 0)
+    return states_dict.get(len_states - 1, 0) + states_dict.get(len_states - 2, 0)
 
 
-# @conditional_lru_cache
-def states_pregen(clue, arg2=None):
+def states_pregen(clue):
     states = [0]
     for nr in clue:
         states.extend([1] * nr)
@@ -104,7 +64,6 @@ def states_pregen(clue, arg2=None):
 
 
 def solve(rows, cols, cheated_pixels=[], drawer=None, lookahead=0):
-    # len_gen_lines.cache_clear()
     pic = Picture(len(rows), len(cols))
 
     for row, col, val in cheated_pixels:
@@ -156,19 +115,6 @@ def write_intersection(lst, pic, is_row, correct_pixels=False):
                 pic.rows_to_solve[i] = True
 
 
-def draw_and_check(
-        pic,
-        mapped_rows,
-        mapped_cols,
-        back_progress,
-        depth,
-        drawer):
-    if not solve_check(pic, mapped_rows, mapped_cols, depth != 0):
-        return False
-
-    return True
-
-
 def solve_real(
         mapped_rows,
         mapped_cols,
@@ -183,18 +129,14 @@ def solve_real(
     if time() - start_time > 60:
         start_time = time()
         reset_pool()
-    if not draw_and_check(
+    if not solve_check(
             pic,
             mapped_rows,
             mapped_cols,
-            back_progress,
-            depth,
-            drawer):
+            depth != 0):
         return
 
     if pic.is_solved():
-        if not Global.stored_backtrack:
-            Global.stored_backtrack = back_progress
         yield pic
         return
 
@@ -204,7 +146,6 @@ def solve_real(
             pic,
             depth %
             2 != 0,
-            depth,
             correct_pixels=correct_pixels):
         return
 
@@ -212,13 +153,14 @@ def solve_real(
         if contradicting:
             yield pic
             return
-        yield from solve_contra(mapped_rows, mapped_cols, pic, depth, back_progress, drawer=drawer, correct_pixels=correct_pixels, max_lookahead=lookahead)
+        yield from solve_contra(mapped_rows, mapped_cols, pic, depth, back_progress, drawer=drawer,
+                                max_lookahead=lookahead)
         return
 
     yield from solve_real(mapped_rows, mapped_cols, pic, depth + 1, back_progress, contradicting, drawer=drawer, correct_pixels=correct_pixels, lookahead=lookahead)
 
 
-def solve_rows_or_cols(mapped, pic, is_row, depth, correct_pixels=False):
+def solve_rows_or_cols(mapped, pic, is_row, correct_pixels=False):
     solve_these = [
         (clue, i, not is_row, pic) for i, clue in mapped if (
             is_row and pic.rows_to_solve[i]) or (
@@ -232,8 +174,8 @@ def solve_rows_or_cols(mapped, pic, is_row, depth, correct_pixels=False):
             else:
                 pic.cols_to_solve[i] = False
 
-    res = Global.pool.starmap(solve_one, solve_these)
-
+    res = list(map(lambda args: solve_one(*args), solve_these)) if Global.pool_size == 1 else Global.pool.starmap(
+        solve_one, solve_these)
     for boo, pix_loc in res:
         if not boo:
             return False
@@ -288,9 +230,7 @@ def solve_contra(
         depth,
         back_progress,
         drawer=None,
-        max_lookahead=0,
-        lookaheading=False,
-        correct_pixels=False):
+        max_lookahead=0):
     filled = pic.count_matching_pixels(lambda x: x != UNKNOWN)
     current_lookahead = 0
     while current_lookahead < max_lookahead:
@@ -411,7 +351,6 @@ def solve_contra_real(
                     # if pic2 has no solutions
                     if pic3 is None:
                         # set opposite pixel
-                        pic2 = None
                         pic.set_pixel(index, value ^ 1)
                         pic.set_should_solve_row(index[0], True)
                         pic.set_should_solve_col(index[1], True)
@@ -444,7 +383,6 @@ def solve_contra_real(
             else:
                 yield pic2
 
-        pic2 = None
         pic.set_pixel(index, value ^ 1)
         pic.set_should_solve_row(index[0], True)
         pic.set_should_solve_col(index[1], True)
@@ -474,7 +412,6 @@ def solve_contra_real(
 
     if filled == new_filled:
         if min_neighs == 0:
-            tested = None
             if lookaheading:
                 yield pic
                 return
@@ -486,8 +423,6 @@ def solve_contra_real(
         yield from solve_contra_real(mapped_rows, mapped_cols, pic, depth, back_progress, min_neighs - 1, sorted_list, tested, drawer, lookahead, lookaheading, max_lookahead)
         return
 
-    sorted_list = None
-    tested = None
     if lookaheading:
         yield pic
         return
@@ -573,13 +508,15 @@ def solve_folder(loc, lookahead=0) -> None:
 
 def solve_file(
         location,
-        cheated_pixels=[],
+        cheated_pixels=None,
         number=-1,
         lookahead=0):
+    if cheated_pixels is None:
+        cheated_pixels = []
     rows, cols = load_clues(location)
     if not clues_valid(rows, cols):
         print(f"Invalid clues: {location}")
-        return
+        return -1
     start = time()
     i = 0
     for pic in solve(
