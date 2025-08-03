@@ -23,25 +23,20 @@ def parse_clues(xml_data):
     root = ET.parse(StringIO(xml_data)).getroot()
 
     # Check if colors are black and white only
-    colors = root.findall(".//color")
-    valid_colors = {'black', 'white'}
-    for color in colors:
-        if color.get('name') not in valid_colors:
+    for color in root.findall(".//color"):
+        if color.get('name') not in {'black', 'white'}:
             return None
 
     # Initialize formatted strings for rows and columns
     rows_formatted = ""
     columns_formatted = ""
 
-    # Find the clues section
-    clues = root.findall(".//clues")
-
-    for clue in clues:
+    # Find and process clues
+    for clue in root.findall(".//clues"):
         # Extract and format each line
         formatted_clue = ""
         for line in clue.findall('./line'):
-            counts = [count.text for count in line.findall('./count')]
-            formatted_clue += ' '.join(counts) + '\n'
+            formatted_clue += ' '.join(count.text for count in line.findall('./count')) + '\n'
 
         # Add to rows or columns
         if clue.get('type') == 'columns':
