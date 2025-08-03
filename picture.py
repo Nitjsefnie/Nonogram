@@ -204,15 +204,14 @@ class Picture:
         else:
             row = row_col
 
-        height, width = self.height, self.width
         count = 0
         if row == 0 or self.__pixels[row - 1, col] != UNKNOWN:
             count += 1
-        if row == height - 1 or self.__pixels[row + 1, col] != UNKNOWN:
+        if row == self.height - 1 or self.__pixels[row + 1, col] != UNKNOWN:
             count += 1
         if col == 0 or self.__pixels[row, col - 1] != UNKNOWN:
             count += 1
-        if col == width - 1 or self.__pixels[row, col + 1] != UNKNOWN:
+        if col == self.width - 1 or self.__pixels[row, col + 1] != UNKNOWN:
             count += 1
 
         return count
@@ -244,12 +243,10 @@ class Picture:
         if self == obj:
             return []
 
-        result = []
-        pixs, pixs2 = self.get_pixels(), obj.get_pixels()
-        indexes = where(pixs != pixs2)
-        differing_values = pixs[indexes]
+        pixs = self.get_pixels()
+        indexes = where(pixs != obj.get_pixels())
         return [(idx[0], idx[1], val)
-                for idx, val in zip(zip(*indexes), differing_values)]
+                for idx, val in zip(zip(*indexes), pixs[indexes])]
 
     def set_all_pixels(self, pixels):
         self.__pixels = pixels
